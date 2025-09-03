@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giveaway Wheel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f0f4f8;
+      color: #1a202c;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .wheel-container { position: relative; width: 32rem; height: 32rem; }
+    .wheel {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 8px solid #cbd5e0; position: relative;
+      transition: transform 6s cubic-bezier(0.2, 0.8, 0.4, 1);
+      overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1),
+      0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    .wheel.spinning { transition: transform 6s cubic-bezier(0.2, 0.8, 0.4, 1); }
+    .slice {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+  transform-origin: 0% 100%;
+  overflow: hidden;
+}
+
+.slice-content {
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  border: 1px solid #fff;
+  transform-origin: 50% 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  text-align: center;
+  padding: 4px;
+  color: #000;
+}
+
+.slice-text {
+  display: block;
+  transform: rotate(calc(var(--rotation) * -1deg));
+  white-space: nowrap;
+}
+
+    .slice:nth-child(odd) .slice-content { background-color: #d1d5db; }
+    .slice:nth-child(even) .slice-content { background-color: #e5e7eb; }
+    .pointer {
+      position: absolute; top: -2rem; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 15px solid transparent; border-right: 15px solid transparent;
+      border-top: 30px solid #ef4444;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1)); z-index: 10;
+    }
+    .start-button {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); z-index: 20;
+      width: 7rem; height: 7rem; border-radius: 50%;
+      background-color: #3b82f6; color: white; font-size: 1.125rem;
+      font-weight: 700; display: flex; justify-content: center; align-items: center;
+      cursor: pointer; border: 4px solid #fff;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .start-button:hover { transform: translate(-50%, -50%) scale(1.05);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); }
+    .start-button:disabled {
+      background-color: #93c5fd; cursor: not-allowed;
+      transform: translate(-50%, -50%) scale(1); box-shadow: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center p-4">
+
+<main class="flex flex-col items-center max-w-2xl w-full">
+  <div class="wheel-container relative mb-8">
+    <div class="pointer"></div>
+    <div id="wheel" class="wheel"></div>
+    <button id="startButton" class="start-button">
+      <span>Start</span>
+    </button>
+  </div>
+
+  <div class="w-full flex flex-col items-center space-y-4">
+    <div id="resultDisplay" class="text-center text-xl font-bold text-gray-800"></div>
+    <div id="wordList" class="p-4 bg-white rounded-lg shadow-md w-full">
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">Available Words (<span id="wordCount"></span>)</h2>
+      <div id="wordsContainer" class="flex flex-wrap gap-2 text-sm text-gray-600"></div>
+    </div>
+    <div id="alertBox" class="p-4 text-center text-sm font-semibold text-red-700 bg-red-100 rounded-lg shadow-md w-full hidden"></div>
+  </div>
+</main>
+
+<script>
+  const allWords = [
+    "पुष्पावती","विक्रम संवत १५०५","सेमरखेडी","सुखा जी","मल्हारगढ़","निसई जी","बुन्देली के देवता कुण्डल पुर",
+    "वंदना","चंदेरी","पुण्य","गुरु तारण को मेला","श्रावकाचार","बजे छम छम छम छमा","मालारोहण","पंडित पूजा",
+    "मेरी भावना","कमलबत्तिसी","उपदेश शुद्ध सार","जैनी","वीतराग","आचार्य तारण स्वामी","मुक्त जीव","शाश्वत",
+    "चर्या","आचार्य मान तुंग जी","मोक्ष","गिरनार जी","पंचप्रभु के संग हमको","शिखर जी","स्वर्ग","अक्षत","आत्मा",
+    "ममलमत","आचार्य मत","सारमत","जैन धर्म","केवलमत","विचार मत","कर्म","शरण","केशरिया झंडा जिनमत",
+    "जिनवानी जग मैया","काले काले बदलो में","ममल पाहुड","हिंसा","क्रोध","ज्ञानावरनी","वाणी","आरती तारण स्वामी की",
+    "अंतर ध्वनि","स्वरुपाचरण","अहिंसा","जीव","दर्शन","ओ गुरु सा","जिनवर","अन्तराय","उत्तम क्षमा","समाधि भावना",
+    "मोह","मंगलाष्टक","मंगलमय मंगल कर","रंगमा रंगमा","सम्यकदर्शन","सुनो जी माँ ने देखे","सम्यकज्ञान","आगम",
+    "पंच प्रभु के संग","स्वाध्याय","सम्यक चरित्र","केसरिया झंडा","प्रभु जी अब ना भटकेंगे","पाप","अल्प","त्रिभंगीसार जी",
+    "दर्शनावरणी","सर्वज्ञ","आत्मा हूँ आत्मा हूँ","छद्मस्थवाणी","न्यानसमुच्यसार","नाममाला जी","हे प्रभु चरणों में",
+    "अजीव","आश्रव","अजीवा","निर्जरा","बाजे छम छम","सम्यकचारित्र"
+  ];
+
+  let availableWords = [...allWords];
+  let wheelWords = [];
+  const maxSlices = 25; // ✅ now showing 25 words at a time
+
+  const wheel = document.getElementById('wheel');
+  const startButton = document.getElementById('startButton');
+  const resultDisplay = document.getElementById('resultDisplay');
+  const wordsContainer = document.getElementById('wordsContainer');
+  const wordCountDisplay = document.getElementById('wordCount');
+  const alertBox = document.getElementById('alertBox');
+
+  const updateWheel = () => {
+    wheelWords = availableWords.slice(0, maxSlices); // ✅ always take 25 from the pool
+    wheel.innerHTML = '';
+    if (wheelWords.length === 0) {
+      showAlert("Giveaway finished! All words have been used.");
+      startButton.disabled = true;
+      startButton.innerText = "Done";
+      return;
+    }
+
+    const sliceDeg = 360 / wheelWords.length;
+    const skewDeg = 90 - sliceDeg;
+
+    wheelWords.forEach((word, index) => {
+      const slice = document.createElement('div');
+      slice.className = 'slice';
+      slice.style.transform = `rotate(${sliceDeg * index}deg) skewY(${skewDeg}deg)`;
+
+      const sliceContent = document.createElement('div');
+      sliceContent.className = 'slice-content';
+      sliceContent.style.setProperty('--skew-deg', `-${skewDeg}deg`);
+      sliceContent.style.backgroundColor = index % 2 === 0 ? '#e5e7eb' : '#d1d5db';
+
+      const sliceText = document.createElement('span');
+      sliceText.className = 'slice-text';
+      sliceText.innerText = word;
+      sliceText.style.setProperty('--rotation', sliceDeg * index);
+
+      sliceContent.appendChild(sliceText);
+      slice.appendChild(sliceContent);
+      wheel.appendChild(slice);
+    });
+
+    updateWordList();
+  };
+
+  const updateWordList = () => {
+    wordsContainer.innerHTML = '';
+    availableWords.forEach(word => {
+      const span = document.createElement('span');
+      span.className = 'px-2 py-1 bg-gray-200 rounded-full text-gray-700';
+      span.innerText = word;
+      wordsContainer.appendChild(span);
+    });
+    wordCountDisplay.innerText = availableWords.length;
+  };
+
+  const showAlert = (message) => {
+    alertBox.innerText = message;
+    alertBox.classList.remove('hidden');
+    setTimeout(() => { alertBox.classList.add('hidden'); }, 5000);
+  };
+
+  startButton.addEventListener('click', () => {
+    if (wheelWords.length === 0) {
+      showAlert("No words left to spin!");
+      return;
+    }
+
+    startButton.disabled = true;
+    startButton.innerText = "Spinning...";
+
+    const randomIndex = Math.floor(Math.random() * wheelWords.length);
+    const sliceDeg = 360 / wheelWords.length;
+    const spinToDeg = 360 * 10 + (360 - (randomIndex * sliceDeg) - (sliceDeg / 2));
+
+    wheel.style.transform = `rotate(${spinToDeg}deg)`;
+    wheel.classList.add('spinning');
+
+    setTimeout(() => {
+      wheel.classList.remove('spinning');
+      const winningWord = wheelWords[randomIndex];
+      resultDisplay.innerText = `${winningWord}`;
+
+      // ✅ Remove the chosen word permanently
+      availableWords = availableWords.filter(w => w !== winningWord);
+
+      // ✅ Update wheel with next 25 words
+      updateWheel();
+
+      startButton.disabled = false;
+      startButton.innerText = "Spin Again";
+    }, 6000);
+  });
+
+  // Initial setup
+  updateWheel();
+</script>
+
+</body>
+</html>
