@@ -89,7 +89,6 @@
 <body class="bg-gray-100 min-h-screen flex justify-center items-center p-4">
 
 <main class="flex flex-row gap-32 max-w-7xl w-full">
-  <!-- Wheel Section -->
   <div class="flex flex-col items-center">
     <div class="wheel-container relative mb-8">
       <div class="pointer"></div>
@@ -101,7 +100,6 @@
     <div id="resultDisplay" class="text-center text-2xl font-bold text-gray-800"></div>
   </div>
 
-  <!-- Available Words Section -->
   <div class="flex-1 ml-10">
     <div id="wordList" class="p-4 bg-white rounded-lg shadow-md w-full">
       <h2 class="text-lg font-semibold mb-2 text-gray-700">
@@ -113,9 +111,11 @@
   </div>
 </main>
 
+<audio id="spinSound" src="C:\Users\aryan_jain\Downloads\spin-232536.mp3" preload="auto"></audio>
+
 <script>
   const allWords = [
-    "पुष्पावती","विक्रम संवत १५०५","सेमरखेडी","सुखा जी","मल्हारगढ़","निसई जी","बुन्देली के देवता कुण्डल पुर",
+    "पुष्पावती","विक्रम संवत 1505","सेमरखेडी","सुखा जी","मल्हारगढ़","निसई जी","बुन्देली के देवता कुण्डल पुर",
     "वंदना","चंदेरी","पुण्य","गुरु तारण को मेला","श्रावकाचार","बजे छम छम छम छमा","मालारोहण","पंडित पूजा",
     "मेरी भावना","कमलबत्तिसी","उपदेश शुद्ध सार","जैनी","वीतराग","आचार्य तारण स्वामी","मुक्त जीव","शाश्वत",
     "चर्या","आचार्य मान तुंग जी","मोक्ष","गिरनार जी","पंचप्रभु के संग हमको","शिखर जी","स्वर्ग","अक्षत","आत्मा",
@@ -138,6 +138,8 @@
   const wordsContainer = document.getElementById('wordsContainer');
   const wordCountDisplay = document.getElementById('wordCount');
   const alertBox = document.getElementById('alertBox');
+  
+  const spinSound = document.getElementById('spinSound');
 
   const updateWheel = () => {
     wheelWords = availableWords.slice(0, maxSlices);
@@ -211,11 +213,19 @@
       const sliceDeg = 360 / wheelWords.length;
       const spinToDeg = 360 * 10 + (360 - (randomIndex * sliceDeg) - (sliceDeg / 2));
 
+      // Start the sound here, just before the wheel begins to spin
+      spinSound.currentTime = 0; // Rewind to start
+      spinSound.play();
+
       wheel.style.transition = 'transform 6s cubic-bezier(0.2, 0.8, 0.4, 1)';
       wheel.style.transform = `rotate(${spinToDeg}deg)`;
       wheel.classList.add('spinning');
 
       setTimeout(() => {
+        // Stop the sound when the spinning animation ends
+        spinSound.pause();
+        spinSound.currentTime = 0;
+
         wheel.classList.remove('spinning');
         const winningWord = wheelWords[randomIndex];
         resultDisplay.innerText = `${winningWord}`;
@@ -225,7 +235,7 @@
 
         startButton.disabled = false;
         startButton.innerText = "Spin Again";
-      }, 6000);
+      }, 6000); // This timeout duration must match the wheel's CSS transition time
     }, 10);
   });
 
