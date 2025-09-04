@@ -22,43 +22,45 @@
       width: 100%; height: 100%; border-radius: 50%;
       border: 8px solid #cbd5e0; position: relative;
       transition: transform 6s cubic-bezier(0.2, 0.8, 0.4, 1);
-      overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1),
-      0 5px 15px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1),
+                  0 5px 15px rgba(0, 0, 0, 0.05);
     }
     .wheel.spinning { transition: transform 6s cubic-bezier(0.2, 0.8, 0.4, 1); }
+
     .slice {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 50%;
-  height: 50%;
-  transform-origin: 0% 100%;
-  overflow: hidden;
-}
-
-.slice-content {
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  border: 1px solid #fff;
-  transform-origin: 50% 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  text-align: center;
-  padding: 4px;
-  color: #000;
-}
-
-.slice-text {
-  display: block;
-  transform: rotate(calc(var(--rotation) * -1deg));
-  white-space: nowrap;
-}
-
-    .slice:nth-child(odd) .slice-content { background-color: #d1d5db; }
-    .slice:nth-child(even) .slice-content { background-color: #e5e7eb; }
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      height: 50%;
+      transform-origin: 100% 100%;
+      overflow: hidden;
+    }
+    .slice-content {
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      top: -100%;
+      left: -100%;
+      background-color: transparent;
+      transform-origin: 50% 50%;
+      transform: rotate(calc(var(--offset-angle) * 1deg)) 
+                 skewY(calc(90deg - var(--slice-angle) * 1deg));
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .slice-text {
+      position: absolute;
+      top: 50%;
+      left: 75%;
+      transform: translateY(-50%) rotate(calc(var(--text-rotation) * 1deg));
+      white-space: nowrap;
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      text-align: right;
+      padding-right: 10px;
+    }
     .pointer {
       position: absolute; top: -2rem; left: 50%; transform: translateX(-50%);
       width: 0; height: 0;
@@ -84,24 +86,30 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col justify-center items-center p-4">
+<body class="bg-gray-100 min-h-screen flex justify-center items-center p-4">
 
-<main class="flex flex-col items-center max-w-2xl w-full">
-  <div class="wheel-container relative mb-8">
-    <div class="pointer"></div>
-    <div id="wheel" class="wheel"></div>
-    <button id="startButton" class="start-button">
-      <span>Start</span>
-    </button>
+<main class="flex flex-row gap-32 max-w-7xl w-full">
+  <!-- Wheel Section -->
+  <div class="flex flex-col items-center">
+    <div class="wheel-container relative mb-8">
+      <div class="pointer"></div>
+      <div id="wheel" class="wheel"></div>
+      <button id="startButton" class="start-button">
+        <span>Spin Again</span>
+      </button>
+    </div>
+    <div id="resultDisplay" class="text-center text-2xl font-bold text-gray-800"></div>
   </div>
 
-  <div class="w-full flex flex-col items-center space-y-4">
-    <div id="resultDisplay" class="text-center text-xl font-bold text-gray-800"></div>
+  <!-- Available Words Section -->
+  <div class="flex-1 ml-10">
     <div id="wordList" class="p-4 bg-white rounded-lg shadow-md w-full">
-      <h2 class="text-lg font-semibold mb-2 text-gray-700">Available Words (<span id="wordCount"></span>)</h2>
+      <h2 class="text-lg font-semibold mb-2 text-gray-700">
+        Available Words (<span id="wordCount"></span>)
+      </h2>
       <div id="wordsContainer" class="flex flex-wrap gap-2 text-sm text-gray-600"></div>
     </div>
-    <div id="alertBox" class="p-4 text-center text-sm font-semibold text-red-700 bg-red-100 rounded-lg shadow-md w-full hidden"></div>
+    <div id="alertBox" class="mt-4 p-4 text-center text-sm font-semibold text-red-700 bg-red-100 rounded-lg shadow-md w-full hidden"></div>
   </div>
 </main>
 
@@ -122,7 +130,7 @@
 
   let availableWords = [...allWords];
   let wheelWords = [];
-  const maxSlices = 25; // ✅ now showing 25 words at a time
+  const maxSlices = 25;
 
   const wheel = document.getElementById('wheel');
   const startButton = document.getElementById('startButton');
@@ -132,7 +140,7 @@
   const alertBox = document.getElementById('alertBox');
 
   const updateWheel = () => {
-    wheelWords = availableWords.slice(0, maxSlices); // ✅ always take 25 from the pool
+    wheelWords = availableWords.slice(0, maxSlices);
     wheel.innerHTML = '';
     if (wheelWords.length === 0) {
       showAlert("Giveaway finished! All words have been used.");
@@ -141,23 +149,24 @@
       return;
     }
 
-    const sliceDeg = 360 / wheelWords.length;
-    const skewDeg = 90 - sliceDeg;
+    const numSlices = wheelWords.length;
+    const sliceDeg = 360 / numSlices;
 
     wheelWords.forEach((word, index) => {
       const slice = document.createElement('div');
       slice.className = 'slice';
-      slice.style.transform = `rotate(${sliceDeg * index}deg) skewY(${skewDeg}deg)`;
+      slice.style.transform = `rotate(${sliceDeg * index}deg)`;
 
       const sliceContent = document.createElement('div');
       sliceContent.className = 'slice-content';
-      sliceContent.style.setProperty('--skew-deg', `-${skewDeg}deg`);
+      sliceContent.style.setProperty('--slice-angle', sliceDeg);
+      sliceContent.style.setProperty('--offset-angle', 90 - sliceDeg);
       sliceContent.style.backgroundColor = index % 2 === 0 ? '#e5e7eb' : '#d1d5db';
 
       const sliceText = document.createElement('span');
       sliceText.className = 'slice-text';
       sliceText.innerText = word;
-      sliceText.style.setProperty('--rotation', sliceDeg * index);
+      sliceText.style.setProperty('--text-rotation', sliceDeg / 2 - 90);
 
       sliceContent.appendChild(sliceText);
       slice.appendChild(sliceContent);
@@ -192,31 +201,34 @@
 
     startButton.disabled = true;
     startButton.innerText = "Spinning...";
+    resultDisplay.innerText = '';
 
-    const randomIndex = Math.floor(Math.random() * wheelWords.length);
-    const sliceDeg = 360 / wheelWords.length;
-    const spinToDeg = 360 * 10 + (360 - (randomIndex * sliceDeg) - (sliceDeg / 2));
-
-    wheel.style.transform = `rotate(${spinToDeg}deg)`;
-    wheel.classList.add('spinning');
+    wheel.style.transition = 'none';
+    wheel.style.transform = 'rotate(0deg)';
 
     setTimeout(() => {
-      wheel.classList.remove('spinning');
-      const winningWord = wheelWords[randomIndex];
-      resultDisplay.innerText = `${winningWord}`;
+      const randomIndex = Math.floor(Math.random() * wheelWords.length);
+      const sliceDeg = 360 / wheelWords.length;
+      const spinToDeg = 360 * 10 + (360 - (randomIndex * sliceDeg) - (sliceDeg / 2));
 
-      // ✅ Remove the chosen word permanently
-      availableWords = availableWords.filter(w => w !== winningWord);
+      wheel.style.transition = 'transform 6s cubic-bezier(0.2, 0.8, 0.4, 1)';
+      wheel.style.transform = `rotate(${spinToDeg}deg)`;
+      wheel.classList.add('spinning');
 
-      // ✅ Update wheel with next 25 words
-      updateWheel();
+      setTimeout(() => {
+        wheel.classList.remove('spinning');
+        const winningWord = wheelWords[randomIndex];
+        resultDisplay.innerText = `${winningWord}`;
 
-      startButton.disabled = false;
-      startButton.innerText = "Spin Again";
-    }, 6000);
+        availableWords = availableWords.filter(w => w !== winningWord);
+        updateWheel();
+
+        startButton.disabled = false;
+        startButton.innerText = "Spin Again";
+      }, 6000);
+    }, 10);
   });
 
-  // Initial setup
   updateWheel();
 </script>
 
